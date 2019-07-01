@@ -235,6 +235,7 @@ if (!defined('__CSRF_PROTECTOR__')) {
                     //action in case of failed validation
                     self::failedValidationAction();
                 } else {
+                    self::$logger->info("CSRF success for ".$token . " on url: POST ".$_SERVER['REQUEST_URI']);
                     self::refreshToken();    //refresh token for successful validation
                 }
             } else if (!static::isURLallowed()) {
@@ -299,13 +300,15 @@ if (!defined('__CSRF_PROTECTOR__')) {
             if (!is_array($_SESSION[self::$config['CSRFP_TOKEN']])) return false;
             foreach ($_SESSION[self::$config['CSRFP_TOKEN']] as $key => $value) {
                 if ($value == $token) {
-
-                    // Clear all older tokens assuming they have been consumed
-                    foreach ($_SESSION[self::$config['CSRFP_TOKEN']] as $_key => $_value) {
-                        if ($_value == $token) break;
-                        array_shift($_SESSION[self::$config['CSRFP_TOKEN']]);
-                    }
+                    unset($_SESSION[self::$config['CSRFP_TOKEN']][$key]);
                     return true;
+//
+//                    // Clear all older tokens assuming they have been consumed
+//                    foreach ($_SESSION[self::$config['CSRFP_TOKEN']] as $_key => $_value) {
+//                        if ($_value == $token) break;
+//                        array_shift($_SESSION[self::$config['CSRFP_TOKEN']]);
+//                    }
+//                    return true;
                 }
             }
 
@@ -397,6 +400,8 @@ if (!defined('__CSRF_PROTECTOR__')) {
                     self::$config['cookieConfig'] = array();
                 self::$cookieConfig = new csrfpCookieConfig(self::$config['cookieConfig']);
             }
+
+            self::$logger->info("CSRF refreshToken to ".$token.' for path '.self::$cookieConfig->path);
 
             setcookie(
                 self::$config['CSRFP_TOKEN'], 
@@ -530,7 +535,7 @@ if (!defined('__CSRF_PROTECTOR__')) {
             $context['requestType'] = self::$requestType;
             $context['cookie'] = $_COOKIE;
 
-            self::$logger->log("OWASP CSRF PROTECTOR VALIDATION FAILURE", $context);
+            self::$logger->error("OWASP CSRF PROTECTOR VALIDATION FAILURE", ['custom_fields' => $context]);
         }
 
         /*
